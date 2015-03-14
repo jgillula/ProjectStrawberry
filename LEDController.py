@@ -3,8 +3,9 @@
 import RPi.GPIO as GPIO
 
 class LEDController:
-    def __init__(self, rgbChannels, frequency=50)
+    def __init__(self, rgbChannels = [36,38,40], frequency=50, rgbMax = [100,20,88]):
         self.rgbChannels = rgbChannels
+        self.rgbMax = rgbMax
 
         GPIO.setmode(GPIO.BOARD)
         for pin in self.rgbChannels:
@@ -15,10 +16,10 @@ class LEDController:
             self.rgbPWMs.append(GPIO.PWM(pin, frequency))
 
                 
-    def setRGB(self, rgbVal):
+    def start(self, rgbVal):
         self.stop()
-        for pwm, value in zip(self.rgbPWMs, rgbVal):
-            value = max(min(value, 100.0), 0.0)
+        for pwm, value, maxValue in zip(self.rgbPWMs, rgbVal, self.rgbMax):
+            value = max(min(value/maxValue*100.0, 100.0), 0.0)
             pwm.start(value)
 
 
