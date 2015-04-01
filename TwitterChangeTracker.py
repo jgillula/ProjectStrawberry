@@ -7,7 +7,7 @@ class TwitterChangeTracker:
     def __init__(self, user, credentials_filename):
         self.user = user
 
-        self.lastChangeTimestamp = datetime(1970,1,1)
+        self.lastChangeTimestamp = None
         credentials_file = open(credentials_filename)
         credentials = pickle.load(credentials_file)
         credentials_file.close()
@@ -28,7 +28,10 @@ class TwitterChangeTracker:
         statuses = self.api.GetUserTimeline(screen_name=self.user)
         if statuses:
             lastChangeTimestamp = datetime.fromtimestamp(max([status.created_at_in_seconds for status in statuses]))
-            if lastChangeTimestamp > self.lastChangeTimestamp:
+            if self.lastChangeTimestamp == None:
+                self.lastChangeTimestamp = lastChangeTimestamp
+                return False            
+            elif lastChangeTimestamp > self.lastChangeTimestamp:
                 self.lastChangeTimestamp = lastChangeTimestamp
                 return True
             else:

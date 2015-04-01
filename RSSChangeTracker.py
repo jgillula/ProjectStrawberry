@@ -8,7 +8,8 @@ class RSSChangeTracker:
         self.URL = URL
 
         self.lastChangeTimestamp = datetime.utcnow()
-        self.latestTitle = ""
+        self.latestTitle = ""        
+
             
     def __str__(self):
         if self.lastChangeTimestamp:
