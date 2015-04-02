@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+# This file should be installed in /etc/network/if-pre-up.d/
+
+import os, re, subprocess, shlex, yaml
+
+WIFI_CONFIG_FILENAME = "/boot/wifi.txt"
+WPA_SUPPLICANT_CONFIG_FILENAME = "/etc/wpa_supplicant/wpa_supplicant.conf"
+
+if __name__ == "__main__":
+   if os.stat(WIFI_CONFIG_FILENAME).st_mtime < os.stat(WPA_SUPPLICANT_CONFIG_FILENAME).st_mtime:
+      exit(0)
+
+   with file(WIFI_CONFIG_FILENAME, 'r') as stream:
+      wifi_config = yaml.load(stream)
+
+   ssid = wifi_config['ssid']
+
+   PREFACE = """ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+
+network={{
+ ssid="{ssid}"
+""".format(ssid=ssid)
+
+
+   if wifi_config.has_key("passphrase"):
+      passphrase = wifi_config['passphrase']
+
+      iwlist_output = subprocess.check_output(shlex.split("iwlist wlan0 scan"))
+
+      network_info = re.findall('(          Cell (?:.(?!          Cell))*?ESSID:"{}"(?:.(?!          Cell))*)'.format(ssid), iwlist_output, re.DOTALL)
+      wpa2_info = re.findall(r'(IE: IEEE 802.11i/WPA2 Version 1(?:.(?!                    IE:))*)', network_info[0], re.DOTALL)
+      wpa1_info = re.findall(r'(IE: WPA Version 1(?:.(?!                    IE:))*)', network_info[0], re.DOTALL)
+      if wpa2_info:
+         proto = "RSN"
+         pairwise = re.findall(r'Pairwise Ciphers \(\d+?\) : (\w*)', wpa2_info[0])[0]
+         key_mgmt = re.findall(r'Authentication Suites \(\d+?\) : (\w*)', wpa2_info[0])[0]
+      elif wpa1_info:
+         proto = "WPA"
+         pairwise = re.findall(r'Pairwise Ciphers \(\d+?\) : (\w*)', wpa1_info[0])[0]
+         key_mgmt = re.findall(r'Authentication Suites \(\d+?\) : (\w*)', wpa1_info[0])[0]                 
+      else:
+         exit(1)
+
+      text = PREFACE + """ psk="{psk}"\n proto={proto}\n key_mgmt=WPA-{key_mgmt}\n pairwise={pairwise}""".format(ssid=ssid, 
+                                                                                                                 psk=passphrase,
+                                                                                                                 key_mgmt = key_mgmt,
+                                                                                                                 pairwise=pairwise,
+                                                                                                                 proto = proto)
+   else:
+      text = PREFACE + """ key_mgmt=NONE"""
+
+   text = text + """\n auth_alg=OPEN\n}\n"""
+
+   with open(WPA_SUPPLICANT_CONFIG_FILENAME, "w") as wpa_supplicant:
+      wpa_supplicant.write(text)
