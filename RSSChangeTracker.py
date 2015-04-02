@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
-import feedparser
-from datetime import datetime
+import feedparser, random, string
 
 class RSSChangeTracker:
     def __init__(self, URL):
         self.URL = URL
 
-        self.lastChangeTimestamp = datetime.utcnow()
+        self.lastChangeTimestamp = None
         self.latestTitle = ""        
 
             
@@ -19,17 +18,18 @@ class RSSChangeTracker:
 
     
     def changed(self):
-        feed = feedparser.parse(self.URL)
+        feed = feedparser.parse(self.URL+'?'+''.join([random.choice(string.ascii_letters) for n in xrange(32)]))
         if feed:
             if feed.has_key('updated_parsed'):
-                lastChangeTimestamp = datetime(feed['updated_parsed'].tm_year, 
-                                               feed['updated_parsed'].tm_mon,
-                                               feed['updated_parsed'].tm_mday,
-                                               feed['updated_parsed'].tm_hour,
-                                               feed['updated_parsed'].tm_min,
-                                               feed['updated_parsed'].tm_sec)
-                if lastChangeTimestamp > self.lastChangeTimestamp:
+                lastChangeTimestamp = feed['updated_parsed']
+                latestTitle = sorted([(entry.published_parsed, entry.title) for entry in feed.entries], reverse=True)[0][1]
+                if self.lastChangeTimestamp is None:
+                    self.lastChangeTimestamp = feed['updated_parsed']
+                    self.latestTitle = latestTitle
+                    return None
+                elif lastChangeTimestamp > self.lastChangeTimestamp and self.latestTitle != latestTitle:
                     self.lastChangeTimestamp = lastChangeTimestamp
+                    self.latestTitle = latestTitle
                     return True
                 else:
                     return False

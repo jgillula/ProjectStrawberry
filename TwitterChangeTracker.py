@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import twitter, pickle
-from datetime import datetime
 
 class TwitterChangeTracker:
     def __init__(self, user, credentials_filename):
@@ -27,7 +26,7 @@ class TwitterChangeTracker:
     def changed(self):
         statuses = self.api.GetUserTimeline(screen_name=self.user)
         if statuses:
-            lastChangeTimestamp = datetime.fromtimestamp(max([status.created_at_in_seconds for status in statuses]))
+            lastChangeTimestamp = max([status.created_at_in_seconds for status in statuses])
             if self.lastChangeTimestamp == None:
                 self.lastChangeTimestamp = lastChangeTimestamp
                 return False            
